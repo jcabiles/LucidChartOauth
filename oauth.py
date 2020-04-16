@@ -1,52 +1,35 @@
+# Using OAuth1Session
+from requests_oauthlib import OAuth1Session
+
+# Using OAuth1 auth helper
 import requests
-from datetime import datetime
-import os
-import secrets
-import codecs
-import base64
-from hashlib import sha1
-import hmac
+from requests_oauthlib import OAuth1
+import argparse
+from urllib.parse import parse_qs
 
-# static variables
-consumer_key = os.environ.get('consumer_key')
-client_access_key = os.environ.get('client_access_key')
+# define LucidChart URLs
+request_token_url = 'https://www.lucidchart.com/oauth/requestToken'
+authorization_url = 'https://www.lucidchart.com/oauth/authorize'
+access_token_url = 'https://www.lucidchart.com/oauth/accessToken'
 
+# grab client credentials from local machine's configuration scripts (e.g., bash_profile)
+client_key = os.environ.get('oauth_consumer_key')
+client_secret = os.environ.get('client_secret')
 
-def create_signature():
-    # key = b"CONSUMER_SECRET&" #If you dont have a token yet
-    key = f'{consumer_key}&{client_access_key}'.encode()
+# Get resource tokens
+oauth = OAuth1(client_key, client_secret=client_secret)
+r = requests.post(url=request_token_url, auth=oauth)
+credentials = parse_qs(r.content.decode())
+resource_owner_key = credentials.get('oauth_token')[0]
+resource_owner_secret = credentials.get('oauth_token_secret')[0]
 
-    # The Base String as specified here:
-    raw = b"HMAC-SHA1" # as specified by OAuth
+lucid_oauth = OAuth1Session(client_key,
+                            client_secret=client_secret,
+                            resource_owner_key='resource_owner_key',
+                            resource_owner_secret='resource_owner_secret')
 
-    hashed = hmac.new(key, raw, sha1)
-
-    # The signature
-    sig = hashed.digest()
-    sig = base64.b64encode(sig)
-    sig = sig.decode()
-    #sig = sig.split('/')[1]
-    return sig
-
-
-# dynamic variables
-timestamp = datetime.today().strftime('%s')
-oauth_nonce = ''.join([secrets.choice('abcdefghijklmnopqrstuvwxyz') for i in range(11)])
-oauth_signature = create_signature()
-
-url = f'https://www.lucidchart.com/oauth/requestToken?oauth_consumer_key={consumer_key}' \
-      f'&oauth_signature_method=HMAC-SHA1' \
-      f'&oauth_timestamp={timestamp}' \
-      f'&oauth_nonce={oauth_nonce}' \
-      f'&oauth_version=1.0' \
-      f'&oauth_signature={oauth_signature}'
-
-
-headers = {}
-payload = {}
-
-#response = requests.request("GET", url, headers=headers, data = payload)
-#access_token = response.text.encode('utf8')
-
-print(oauth_signature)
-print(url)
+# test outputs
+print(client_key)
+print(client_secret)
+print(resource_owner_key)
+print(resource_owner_secret)
